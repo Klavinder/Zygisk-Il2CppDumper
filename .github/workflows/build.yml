@@ -13,6 +13,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -26,6 +28,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: zygisk-il2cppdumper
-          path: out/zygisk-il2cppdumper-*-release.zip
+          path: |
+            out/magisk_module_release/META-INF/
+            out/magisk_module_release/module.prop
+            out/magisk_module_release/zygisk/
           if-no-files-found: error
-          compression-level: 0
