@@ -1,5 +1,6 @@
 #include <cstring>
 #include <thread>
+#include <chrono>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -32,7 +33,12 @@ public:
 
     void postAppSpecialize(const AppSpecializeArgs *) override {
         if (enable_hack) {
-            std::thread hack_thread(hack_prepare, game_data_dir, data, length);
+            // Создаем поток с задержкой 5 секунд для обхода защиты при запуске
+            std::thread hack_thread([this]() {
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+                LOGI("Starting dump for: %s", GamePackageName);
+                hack_prepare(game_data_dir, data, length);
+            });
             hack_thread.detach();
         }
     }
@@ -40,10 +46,10 @@ public:
 private:
     Api *api;
     JNIEnv *env;
-    bool enable_hack;
-    char *game_data_dir;
-    void *data;
-    size_t length;
+    bool enable_hack = false;
+    char *game_data_dir = nullptr;
+    void *data = nullptr;
+    size_t length = 0;
 
     void preSpecialize(const char *package_name, const char *app_data_dir) {
         if (strcmp(package_name, GamePackageName) == 0) {
@@ -53,12 +59,14 @@ private:
             strcpy(game_data_dir, app_data_dir);
 
 #if defined(__i386__)
+            auto path = "zygisk/x86.so";
+#elif defined(__x86_64__)
+            auto path = "zygisk/x86_64.so";
+#elif defined(__arm__)
             auto path = "zygisk/armeabi-v7a.so";
-#endif
-#if defined(__x86_64__)
+#else
             auto path = "zygisk/arm64-v8a.so";
 #endif
-#if defined(__i386__) || defined(__x86_64__)
             int dirfd = api->getModuleDir();
             int fd = openat(dirfd, path, O_RDONLY);
             if (fd != -1) {
@@ -67,10 +75,10 @@ private:
                 length = sb.st_size;
                 data = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0);
                 close(fd);
+                LOGI("Module library mapped: %s", path);
             } else {
-                LOGW("Unable to open arm file");
+                LOGW("Unable to open library file: %s", path);
             }
-#endif
         } else {
             api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
         }
