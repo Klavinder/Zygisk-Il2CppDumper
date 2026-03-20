@@ -35,7 +35,7 @@ public:
         if (enable_hack) {
             // Создаем поток с задержкой 5 секунд для обхода защиты при запуске
             std::thread hack_thread([this]() {
-                std::this_thread::sleep_for(std::chrono::seconds(5));
+                std::this_thread::sleep_for(std::chrono::seconds(15));
                 LOGI("Starting dump for: %s", GamePackageName);
                 hack_prepare(game_data_dir, data, length);
             });
